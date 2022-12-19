@@ -81,6 +81,16 @@ class BlockChain():
     def get_chains(self):
         self.method = 'get_chains'
         return self.__request()
+     #Засшифровать текст
+    def encrypt(self,data):
+        self.data = data
+        self.method = 'encrypt'
+        return self.__request()
+     #Расшифровать текст
+    def decrypt(self,data):
+        self.data = data
+        self.method = 'decrypt'
+        return self.__request()
     # Создать hash
     def make_hash(self, prev_hash):
         s = 0

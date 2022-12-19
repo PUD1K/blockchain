@@ -3,11 +3,12 @@
   <div class="main_page">
     <div class="columns mt-2">
       <div class="column is-6 is-offset-3">
-        <a id="main" class="is-size-4" @click="main=true">Main</a>
-        <a id="chains" class="is-size-4" @click="main=false">Chains</a>
+        <a id="main" class="is-size-4" @click="main=0">Main</a>
+        <a id="chains" class="is-size-4" @click="main=1">Chains</a>
+        <a id="chains" class="is-size-4" @click="main=2">Messages</a>
       </div>
     </div>
-    <div class="main" v-if="main">
+    <div class="main" v-if="main==0">
         <div class="columns">
 
             <div class="column is-6 is-offset-3 box mt-5">
@@ -22,6 +23,13 @@
                     <label>Coins</label>
                     <div class="control">
                         <input type="text" class="input is-link" v-model="coins" :readonly="true">
+                    </div>
+                </div>
+
+                <div class="field">
+                    <label>Pass</label>
+                    <div class="control is-link">
+                        <input type="text" class="input is-link" v-model="pass" :readonly="true">
                     </div>
                 </div>
 
@@ -77,17 +85,43 @@
           </div>
 
           <div class="column box mt-4 is-offset-3 mb-6" id="foo">
-                <div class="control has-text-left">
-                  <button class="button is-link" @click="get_chains">Get chains</button>
-                  <button id="get_tasks" class="button is-link " @click="get_tasks">Get tasks</button>
+              <div class="control has-text-left">
+                <button class="button is-link" @click="get_chains">Update chains</button>
+                <button id="get_tasks" class="button is-link " @click="get_tasks">Get tasks</button>
             </div>
           </div>
 
         </div>
 
-          <div class="column mt-4" v-if="!main">
+          <div class="column mt-4" v-if="main==1">
             <BlockChain
                 v-for="block in blocks"
+                v-bind:key ="block.id"
+                v-bind:block="block"/>
+          </div>
+
+          <div class="column mt-4" v-if="main==2">
+            <div class="columns">
+
+            <div class="column is-7 is-offset-3 box mt-5">
+                <div class="field">
+                    <label>Hach</label>
+                    <div class="control is-link">
+                        <input type="text" class="input is-link" v-model="selected_hach" :readonly="false">
+                    </div>
+                </div>
+
+                <div class="field">
+                  <div class="control has-text-centered">
+                      <button class="button is-link" @click="get_messages">Update_messages</button>
+                  </div>
+                </div>
+            </div>
+
+        </div> 
+
+            <MessagesChain 
+                v-for="block in chat"
                 v-bind:key ="block.id"
                 v-bind:block="block"/>
           </div>
@@ -99,6 +133,8 @@
 <script>
 import axios from 'axios';
 import BlockChain from '@/components/BlockChain.vue'
+import MessagesChain from '@/components/MessagesChain.vue'
+
 
 import { toast } from 'bulma-toast'
 
@@ -107,6 +143,7 @@ import { toast } from 'bulma-toast'
 export default {
   components:{
     BlockChain,
+    MessagesChain
   },
   data(){
     return{
@@ -118,12 +155,19 @@ export default {
       doing_tasks: false,
       main: true,
 
-      blocks: []  
+      selected_hach: "",
+      pass: "123",
+
+      blocks: [],
+      chat: []
     }
   },
-  mounted(){
+  async mounted(){
     this.get_data()
-    this.get_chains()
+    await this.get_chains()
+
+    this.get_messages()
+    console.log(this.chat)
   },
   methods:{
     async get_data(){
@@ -132,6 +176,7 @@ export default {
         .then(response => {
           this.username = response.data.username
           this.hach = response.data.hach
+          this.selected_hach = this.hach
           this.coins = response.data.coins
         })
         .catch(error => {
@@ -169,11 +214,27 @@ export default {
       if(!!this.hach && !!this.to_hach && !!this.type_task && !!this.body){
         console.log(this.type_task)
         if(this.type_task == "custom"){
+          const encrypt_body = {
+            password: this.pass,
+            message: this.body 
+          }
+
+          var msg = {}
+          await axios
+            .post('/encrypt_message/', encrypt_body)
+            .then(response => {
+              msg = response.data
+            })
+            .catch(error => {
+              console.log(error)
+            })
+
+
           const request_body = {
             from_hach: this.hach,
             to_hach: this.to_hach,
             type_task: this.type_task,
-            message: this.body
+            message: msg
           }
           await axios
             .post('/send_message/', request_body)
@@ -260,6 +321,56 @@ export default {
         .catch(e => {
           console.log(e)
         })
+    },
+
+    get_messages(){
+      this.chat = []
+      // c кем ведется переписка
+      var user_hach = ""
+      var from_hach = ""
+      var to_hach = ""
+
+      this.blocks.forEach(block => {
+        block.data_json.forEach(elem => {
+            if(elem.data_json.type_task == "custom" && (elem.data_json.to_hach == this.selected_hach|| elem.data_json.from_hach == this.selected_hach)){
+              // если мне отправили
+              if(elem.data_json.to_hach == this.selected_hach){
+                user_hach = elem.data_json.from_hach
+                from_hach = user_hach
+                to_hach = "me"
+              }
+
+              if(elem.data_json.from_hach == this.selected_hach){
+                // если я отправил
+                user_hach = elem.data_json.to_hach
+                from_hach = "me"
+                to_hach = user_hach
+              }
+
+              let index = this.search_value(this.chat, user_hach)
+              if(index == null){
+                  this.chat.push({
+                      "user_hach": user_hach,
+                      "messages": []
+                  })
+                  index = this.search_value(this.chat, user_hach)
+              }
+              this.chat[index]["messages"].push({
+                "from_hach": from_hach,
+                "to_hach": to_hach,
+                "message": elem.data_json.message
+              })
+
+            }
+        })
+      })
+    },
+    search_value(obj, hach){
+        for(var i = 0; i < obj.length; i++){
+            if(obj[i]["user_hach"] == hach){
+                return i
+            }
+        }
     }
   }
 }
@@ -291,7 +402,7 @@ a#chains{
 }
 
 a#main{
-  padding-left:200px
+  padding-left:50px
 }
 
 a:link {

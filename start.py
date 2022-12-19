@@ -48,6 +48,23 @@ class User:
         self.coins = self.result.json()["coins"] 
         return self.coins   
 
+    def encrypt_message(self, body):
+        print(body)
+        data = {
+            "private_key": body["password"],
+            "text": body["message"]
+        }
+        result = self.init.encrypt(data)
+        return result.json()
+
+    def decrypt_message(self, body):
+        data = {
+            "private_key": body["private_key"],
+            "encrypted_object": body["encrypted_object"]
+        }
+        result = self.init.decrypt(data)
+        return result.json()
+
     def get_tasks(self):
         # получить задачи
         self.result = self.init.get_task().json()

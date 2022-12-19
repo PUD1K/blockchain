@@ -5,10 +5,13 @@
         <div class="box"
             v-for="elem in block.data_json"
             v-bind:key="elem.id">
-                <div class="column"
-                    v-for="i in elem.data_json"
+                <div class="field"
+                    v-for="(i, index) in elem.data_json"
                     v-bind:key="i.id">
-                        <p><strong>{{getKeyByValue(elem.data_json, i)}}: </strong>{{i}}</p>
+                    <label>{{getKeyByValue(elem.data_json, i)}}</label>
+                    <div class="control is-link">
+                        <input type="text" class="input is-link" v-model="elem.data_json[index]" :readonly="true">
+                    </div>
                 </div>
         </div>
     </div>

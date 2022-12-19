@@ -22,12 +22,27 @@ class user_data:
 class messageBody(BaseModel):
     from_hach: str
     to_hach: str
-    message: str
+    message: object
 
 class coinsBody(BaseModel):
     from_hach: str
     to_hach: str
     count_coins: str
+
+class messageEncryptBody(BaseModel):
+    password: str
+    message: str
+
+class messageDecryptBody(BaseModel):
+    password: str
+    message: object
+
+class messageCryptBody(BaseModel):
+    action: str
+    curlid: str
+    random_key: str
+    random_number: str
+    secret_text: str
     
 
 username = "tum"
@@ -43,6 +58,25 @@ async def send_message(body: messageBody):
         "message": body.message
     }
     result = user_data.user.send_task(data)
+    return result
+
+
+@app.post("/encrypt_message")
+async def encrypt_message(body: messageEncryptBody):
+    data = {
+        "message": body.message,
+        "password": body.password
+    }
+    result = user_data.user.encrypt_message(data)
+    return result
+
+@app.post("/decrypt_message")
+async def decrypt_message(body: messageDecryptBody):
+    data = {
+        "private_key": body.password,
+        "encrypted_object": body.message
+    }
+    result = user_data.user.decrypt_message(data)
     return result
 
 
@@ -100,7 +134,8 @@ async def my_data():
 
 origins = [
     "http://localhost:8080",
-    "http://128.0.0.1:8000"
+    "http://128.0.0.1:8000",
+    "http://192.168.0.229:8080"
 ]
 
 app.add_middleware(
